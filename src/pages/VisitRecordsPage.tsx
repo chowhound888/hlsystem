@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   Bell,
@@ -39,6 +39,7 @@ function visitTypeClass(type: VisitRecord['visitType']) {
 }
 
 export default function VisitRecordsPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '')
   const [department, setDepartment] = useState(searchParams.get('department') ?? '全部科室')
@@ -131,7 +132,7 @@ export default function VisitRecordsPage() {
             {visibleRecords.length ? <>
               <div className="table-wrap">
                 <table className="records-table"><caption className="sr-only">就诊记录列表</caption><thead><tr><th>患者</th><th>科室 / 医生</th><th>诊断</th><th>就诊时间</th><th>类型</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>
-                  {visibleRecords.map((record) => <tr key={record.id} tabIndex={0} role="link" onClick={() => window.location.assign(`/visit-records/${record.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') window.location.assign(`/visit-records/${record.id}`) }}>
+                  {visibleRecords.map((record) => <tr key={record.id} tabIndex={0} role="link" onClick={() => navigate(`/visit-records/${record.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') navigate(`/visit-records/${record.id}`) }}>
                     <td><div className="patient-cell"><div className={`avatar avatar-${record.patient.gender === '女' ? 'pink' : 'blue'}`}>{initials(record.patient.name)}</div><div><strong>{record.patient.name}</strong><span>{record.patient.gender} · {record.patient.age} 岁 <em>{record.patient.id}</em></span></div></div></td>
                     <td><div className="department-cell"><strong>{record.department}</strong><span>{record.doctor} 医生</span></div></td>
                     <td><div className="diagnosis-cell">{record.diagnosis.slice(0, 2).map((item) => <span className="diagnosis-tag" key={item}>{item}</span>)}</div></td>
