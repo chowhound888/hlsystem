@@ -1,0 +1,52 @@
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# Dependencies and virtual environments
+node_modules/
+vendor/
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Build output and coverage artifacts
+dist/
+build/
+out/
+target/
+bin/
+coverage/
+.cache/
+.pytest_cache/
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
