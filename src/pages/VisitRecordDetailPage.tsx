@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -14,7 +14,7 @@ import {
   Thermometer,
   UserRound,
 } from 'lucide-react'
-import { visitRecords } from '../data/visitRecords'
+import { fetchVisitRecord } from '../api'
 import type { VisitRecord } from '../types'
 
 function formatVisitDate(value: string) {
@@ -31,7 +31,26 @@ function visitTypeClass(type: VisitRecord['visitType']) {
 
 export default function VisitRecordDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const record = useMemo(() => visitRecords.find((item) => item.id === id), [id])
+  const [record, setRecord] = useState<VisitRecord>()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false)
+      return
+    }
+    let active = true
+    setLoading(true)
+    fetchVisitRecord(id)
+      .then((result) => active && setRecord(result.record))
+      .catch(() => active && setRecord(undefined))
+      .finally(() => active && setLoading(false))
+    return () => { active = false }
+  }, [id])
+
+  if (loading) {
+    return <div className="not-found"><div className="empty-icon"><ClipboardCheck size={21} /></div><h1>正在加载记录</h1><p>正在从后端获取就诊详情。</p></div>
+  }
 
   if (!record) {
     return <div className="not-found"><div className="empty-icon"><ClipboardCheck size={21} /></div><h1>记录不存在</h1><p>这条就诊记录可能已被移除或暂无访问权限。</p><Link className="button button-primary" to="/visit-records">返回就诊记录</Link></div>

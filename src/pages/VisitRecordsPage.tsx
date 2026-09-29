@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
@@ -14,7 +14,7 @@ import {
   Stethoscope,
   Users,
 } from 'lucide-react'
-import { departments, visitRecords } from '../data/visitRecords'
+import { fetchVisitRecords } from '../api'
 import type { VisitRecord } from '../types'
 
 const pageSize = 6
@@ -46,20 +46,38 @@ export default function VisitRecordsPage() {
   const [dateRange, setDateRange] = useState(searchParams.get('date') ?? '全部时间')
   const currentPage = Number(searchParams.get('page') ?? '1')
 
-  const filteredRecords = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase()
-    return visitRecords.filter((record) => {
-      const matchesKeyword = !normalizedKeyword || [record.patient.name, record.id, ...record.diagnosis].some((value) => value.toLowerCase().includes(normalizedKeyword))
-      const matchesDepartment = department === '全部科室' || record.department === department
-      const recordDate = record.visitTime.slice(0, 10)
-      const matchesDate = dateRange === '全部时间' || (dateRange === '本周' ? recordDate >= '2026-09-21' : recordDate >= '2026-09-01')
-      return matchesKeyword && matchesDepartment && matchesDate
-    })
-  }, [dateRange, department, keyword])
+  const [visibleRecords, setVisibleRecords] = useState<VisitRecord[]>([])
+  const [departments, setDepartments] = useState<string[]>(['全部科室'])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
-  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize))
-  const page = Math.min(Math.max(currentPage, 1), totalPages)
-  const visibleRecords = filteredRecords.slice((page - 1) * pageSize, page * pageSize)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setLoadError('')
+    fetchVisitRecords({
+      keyword: searchParams.get('keyword') ?? '',
+      department: searchParams.get('department') ?? '全部科室',
+      date: searchParams.get('date') ?? '全部时间',
+      page: currentPage,
+      pageSize,
+    })
+      .then((result) => {
+        if (!active) return
+        setVisibleRecords(result.items)
+        setDepartments(result.departments)
+        setTotal(result.total)
+        setTotalPages(result.totalPages)
+        setPage(result.page)
+      })
+      .catch(() => active && setLoadError('无法加载就诊记录，请确认后端服务已启动。'))
+      .finally(() => active && setLoading(false))
+    return () => { active = false }
+  }, [currentPage, retryKey, searchParams])
 
   function updateFilters(next: { keyword?: string; department?: string; date?: string; page?: number }) {
     const params = new URLSearchParams(searchParams)
@@ -121,7 +139,7 @@ export default function VisitRecordsPage() {
           </section>
 
           <section className="records-panel">
-            <div className="panel-heading"><div><h2>最近就诊</h2><p>共 {filteredRecords.length} 条记录</p></div><button className="button button-secondary"><FileText size={16} />导出记录</button></div>
+            <div className="panel-heading"><div><h2>最近就诊</h2><p>共 {total} 条记录</p></div><button className="button button-secondary"><FileText size={16} />导出记录</button></div>
             <form className="filter-bar" onSubmit={handleSearch}>
               <label className="search-field"><Search size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索患者姓名、就诊编号或诊断" aria-label="搜索患者姓名、就诊编号或诊断" /><kbd>⌘ K</kbd></label>
               <label className="select-field"><span>科室</span><select value={department} onChange={(event) => { setDepartment(event.target.value); updateFilters({ department: event.target.value, page: 1 }) }} aria-label="按科室筛选">{departments.map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -129,7 +147,7 @@ export default function VisitRecordsPage() {
               <button className="button button-primary" type="submit">查询</button>
             </form>
 
-            {visibleRecords.length ? <>
+            {loading ? <div className="empty-state"><div className="empty-icon"><Activity size={21} /></div><h3>正在加载记录</h3><p>正在从后端获取最新就诊数据。</p></div> : loadError ? <div className="empty-state"><div className="empty-icon"><Activity size={21} /></div><h3>记录加载失败</h3><p>{loadError}</p><button className="button button-secondary" onClick={() => setRetryKey((value) => value + 1)}>重试</button></div> : visibleRecords.length ? <>
               <div className="table-wrap">
                 <table className="records-table"><caption className="sr-only">就诊记录列表</caption><thead><tr><th>患者</th><th>科室 / 医生</th><th>诊断</th><th>就诊时间</th><th>类型</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>
                   {visibleRecords.map((record) => <tr key={record.id} tabIndex={0} role="link" onClick={() => navigate(`/visit-records/${record.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') navigate(`/visit-records/${record.id}`) }}>
@@ -143,7 +161,7 @@ export default function VisitRecordsPage() {
                 </tbody></table>
               </div>
               <div className="mobile-records">{visibleRecords.map((record) => <Link className="mobile-record" key={record.id} to={`/visit-records/${record.id}`}><div className="mobile-record-top"><div className="patient-cell"><div className={`avatar avatar-${record.patient.gender === '女' ? 'pink' : 'blue'}`}>{initials(record.patient.name)}</div><div><strong>{record.patient.name}</strong><span>{record.patient.gender} · {record.patient.age} 岁</span></div></div><span className={visitTypeClass(record.visitType)}>{record.visitType}</span></div><div className="mobile-record-meta"><span>{record.department} · {record.doctor} 医生</span><span>{formatVisitTime(record.visitTime)}</span></div><div className="diagnosis-cell">{record.diagnosis.map((item) => <span className="diagnosis-tag" key={item}>{item}</span>)}</div></Link>)}</div>
-              <div className="pagination"><span>显示 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredRecords.length)} 条，共 {filteredRecords.length} 条</span><div className="pagination-actions"><button aria-label="上一页" disabled={page === 1} onClick={() => updateFilters({ page: page - 1 })}><ChevronLeft size={16} /></button><span className="current-page">{page}</span><span>/ {totalPages}</span><button aria-label="下一页" disabled={page === totalPages} onClick={() => updateFilters({ page: page + 1 })}><ChevronRight size={16} /></button></div></div>
+              <div className="pagination"><span>显示 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} 条，共 {total} 条</span><div className="pagination-actions"><button aria-label="上一页" disabled={page === 1} onClick={() => updateFilters({ page: page - 1 })}><ChevronLeft size={16} /></button><span className="current-page">{page}</span><span>/ {totalPages}</span><button aria-label="下一页" disabled={page === totalPages} onClick={() => updateFilters({ page: page + 1 })}><ChevronRight size={16} /></button></div></div>
             </> : <div className="empty-state"><div className="empty-icon"><Search size={21} /></div><h3>没有找到匹配的记录</h3><p>请尝试调整关键词或筛选条件。</p><button className="button button-secondary" onClick={() => { setKeyword(''); setDepartment('全部科室'); setDateRange('全部时间'); setSearchParams({}) }}>清除筛选</button></div>}
           </section>
           <p className="privacy-note"><span className="privacy-lock">⌾</span> 患者信息仅供授权医务人员查看，所有访问都会被记录。</p>
