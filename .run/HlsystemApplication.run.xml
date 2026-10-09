@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="HlsystemApplication" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.hlsystem.HlsystemApplication" />
+    <module name="hlsystem" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/back" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

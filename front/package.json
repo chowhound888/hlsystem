@@ -1,0 +1,33 @@
+{
+  "name": "hlsystem-front",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node tests/api-smoke.mjs && node tests/api-controls.mjs && node tests/api-concurrency.mjs && node tests/api-corrections.mjs",
+    "test:ui":"node tests/ui-smoke.mjs"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "decimal.js": "^10.6.0",
+    "echarts": "^5.6.0",
+    "element-plus": "^2.10.5",
+    "lucide-vue-next": "^0.468.0",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.16.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "prettier": "^3.9.9",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^2.2.12"
+  }
+}

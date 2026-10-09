@@ -1,0 +1,12 @@
+front/node_modules/
+front/dist/
+*.tsbuildinfo
+back/target/
+back/runtime/
+back/.env
+back/src/main/resources/application-local.yml
+.tools/
+.runtime/
+*.log
+.idea/
+.vscode/
