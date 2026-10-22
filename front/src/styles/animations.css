@@ -1,0 +1,265 @@
+/* ========================================
+   HLSYSTEM Premium Animations
+   医疗药品管理系统 - 高级动效系统
+   ======================================== */
+
+/* === 页面切换过渡（轻量快速） === */
+.page-slide-enter-active {
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+.page-slide-leave-active {
+  transition: opacity 0.15s ease-in, transform 0.15s ease-in;
+}
+.page-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* === 表格行交错入场 === */
+.el-table .el-table__row {
+  transition: all 0.25s ease;
+  animation: tableRowIn 0.4s ease-out both;
+}
+.el-table .el-table__row:nth-child(1) { animation-delay: 0.02s; }
+.el-table .el-table__row:nth-child(2) { animation-delay: 0.04s; }
+.el-table .el-table__row:nth-child(3) { animation-delay: 0.06s; }
+.el-table .el-table__row:nth-child(4) { animation-delay: 0.08s; }
+.el-table .el-table__row:nth-child(5) { animation-delay: 0.10s; }
+.el-table .el-table__row:nth-child(6) { animation-delay: 0.12s; }
+.el-table .el-table__row:nth-child(7) { animation-delay: 0.14s; }
+.el-table .el-table__row:nth-child(8) { animation-delay: 0.16s; }
+.el-table .el-table__row:nth-child(9) { animation-delay: 0.18s; }
+.el-table .el-table__row:nth-child(10) { animation-delay: 0.20s; }
+
+@keyframes tableRowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* 表格行悬停增强 */
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: var(--color-bg-hover) !important;
+  transition: background 0.2s ease;
+}
+
+/* 数据更新闪烁 */
+@keyframes rowHighlight {
+  0% { background-color: var(--color-primary-light); }
+  100% { background-color: transparent; }
+}
+.row-updated td {
+  animation: rowHighlight 1.5s ease-out;
+}
+
+/* === 弹窗弹性动画 === */
+.el-dialog {
+  animation: dialogBounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+}
+@keyframes dialogBounceIn {
+  0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 遮罩淡入 */
+.el-overlay {
+  animation: overlayIn 0.3s ease-out both;
+}
+@keyframes overlayIn {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(4px); }
+}
+
+/* 抽屉弹性滑入 */
+.el-drawer.rtl {
+  animation: drawerSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+}
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* === 按钮涟漪效果（排除 link 和 text 按钮） === */
+.el-button:not(.is-link):not(.is-text) {
+  position: relative;
+  overflow: hidden;
+}
+.el-button {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.el-button:not(.is-link):not(.is-text)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+.el-button:not(.is-link):not(.is-text):active::after {
+  opacity: 1;
+  transform: scale(2.5);
+  transition: all 0s;
+}
+.el-button:not(.is-link):not(.is-text):active {
+  transform: scale(0.95) !important;
+}
+.el-button--primary:not(.is-link):not(.is-text):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35) !important;
+}
+.el-button--default:not(.is-link):not(.is-text):hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* === 输入框聚焦发光 === */
+.el-input__wrapper {
+  transition: all 0.3s ease !important;
+}
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15), 0 0 0 1px var(--color-primary) inset !important;
+}
+
+/* === 卡片 3D 倾斜效果 === */
+.card-3d {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+.card-3d:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* === 鼠标跟随光晕 === */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+.glow-card::before {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  left: var(--mouse-x, 50%);
+  top: var(--mouse-y, 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.glow-card:hover::before {
+  opacity: 1;
+}
+
+/* === 骨架屏 === */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-hover) 25%,
+    var(--color-border-light) 50%,
+    var(--color-bg-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-text { height: 16px; margin-bottom: 8px; }
+.skeleton-title { height: 24px; width: 60%; margin-bottom: 16px; }
+.skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; }
+.skeleton-card {
+  height: 120px;
+  border-radius: var(--radius-md);
+}
+
+/* === 加载遮罩优化 === */
+.el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(6px) !important;
+}
+.el-loading-spinner .circular {
+  width: 42px !important;
+  height: 42px !important;
+}
+.el-loading-spinner .path {
+  stroke: var(--color-primary) !important;
+}
+
+/* === 消息提示弹入 === */
+.el-message {
+  animation: messageIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+}
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === Tag 弹入 === */
+.el-tag {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.el-tag:hover {
+  transform: scale(1.05);
+}
+
+/* === 下拉菜单弹入 === */
+.el-dropdown-menu,
+.el-select-dropdown {
+  animation: dropdownIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+}
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === 分页器悬停 === */
+.el-pager li {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.el-pager li:hover {
+  transform: scale(1.15);
+}
+.el-pager li.is-active {
+  transform: scale(1.1);
+}
+
+/* === 滚动条美化 === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-placeholder); }
+
+/* === 工具类 === */
+.animate-spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* === 减少动效偏好 === */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
   LayoutDashboard,
@@ -18,10 +18,19 @@ import {
   Activity,
 } from "lucide-vue-next";
 import { useAuth } from "../stores/auth";
-const auth = useAuth(),
-  router = useRouter(),
-  route = useRoute(),
-  collapsed = ref(false);
+import { useGlobalHotkeys } from "../composables/useHotkeys";
+import Breadcrumb from "../components/common/Breadcrumb.vue";
+import UndoBar from "../components/common/UndoBar.vue";
+import HotkeyHelp from "../components/common/HotkeyHelp.vue";
+
+const auth = useAuth();
+const router = useRouter();
+const route = useRoute();
+const collapsed = ref(false);
+
+// 初始化全局快捷键
+useGlobalHotkeys();
+
 const groups = [
   {
     name: "工作台",
@@ -116,6 +125,7 @@ const groups = [
     ],
   },
 ];
+
 const visible = computed(() =>
   groups
     .map((g) => ({
@@ -124,263 +134,460 @@ const visible = computed(() =>
     }))
     .filter((g) => g.links.length),
 );
+
 async function logout() {
   await auth.logout();
   router.push("/login");
 }
+
+// 页面切换时滚动内容区到顶部，但不影响侧边栏
+const mainContent = ref<HTMLElement>();
+watch(() => route.path, () => {
+  nextTick(() => {
+    if (mainContent.value) {
+      mainContent.value.scrollTop = 0;
+    }
+  });
+});
 </script>
+
 <template>
   <div class="shell" :class="{ collapsed }">
+    <!-- 侧边栏 -->
     <aside class="sidebar">
+      <!-- 品牌区 -->
       <div class="brand">
-        <div class="brand-mark"><Activity :size="23" /></div>
-        <div class="brand-text">药品管理分系统<small>仁和教学医院</small></div>
+        <div class="brand-mark">
+          <Activity :size="22" />
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">药品管理分系统</span>
+          <small>仁和教学医院</small>
+        </div>
       </div>
-      <nav>
+
+      <!-- 导航菜单 -->
+      <nav class="sidebar-nav">
         <div v-for="g in visible" :key="g.name" class="nav-group">
           <div class="nav-heading">
-            <component :is="g.icon" :size="16" /><span>{{ g.name }}</span>
+            <component :is="g.icon" :size="14" />
+            <span>{{ g.name }}</span>
           </div>
           <router-link
             v-for="l in g.links"
             :key="l[1]"
             :to="l[1]"
             :title="l[0]"
-            >{{ l[0] }}</router-link
+            class="nav-item"
+            active-class="active"
           >
+            {{ l[0] }}
+          </router-link>
         </div>
       </nav>
-      <div class="sidebar-foot">药事管理工作平台</div>
+
+      <!-- 底部信息 -->
+      <div class="sidebar-footer">
+        <span>药事管理工作平台</span>
+      </div>
     </aside>
+
+    <!-- 主内容区 -->
     <div class="main">
+      <!-- 顶栏 -->
       <header class="topbar">
         <button
-          class="icon-button"
+          class="icon-button menu-toggle"
           title="展开或折叠菜单"
           @click="collapsed = !collapsed"
         >
-          <Menu :size="18" /></button
-        ><span class="breadcrumb">{{ route.meta.title }}</span>
+          <Menu :size="18" />
+        </button>
+        
+        <span class="breadcrumb">{{ route.meta.title }}</span>
+        
         <div class="topbar-right">
           <el-select
             :model-value="auth.locationId"
             @update:model-value="auth.changeLocation"
-            style="width: 180px"
-            ><el-option
+            class="location-select"
+            placeholder="选择机构"
+          >
+            <el-option
               v-for="l in auth.user?.locations"
               :key="l.id"
               :label="l.name"
-              :value="l.id" /></el-select
-          ><el-dropdown @command="logout"
-            ><span class="user-menu"
-              ><span class="avatar">{{
-                auth.user?.displayName.slice(0, 1)
-              }}</span
-              >{{ auth.user?.displayName }}<ChevronDown :size="14" /></span
-            ><template #dropdown
-              ><el-dropdown-menu
-                ><el-dropdown-item command="logout"
-                  ><LogOut :size="14" /> 退出登录</el-dropdown-item
-                ></el-dropdown-menu
-              ></template
-            ></el-dropdown
-          >
+              :value="l.id"
+            />
+          </el-select>
+          
+          <el-dropdown @command="logout" trigger="click">
+            <span class="user-menu">
+              <span class="avatar">{{ auth.user?.displayName.slice(0, 1) }}</span>
+              <span class="user-name">{{ auth.user?.displayName }}</span>
+              <ChevronDown :size="14" />
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">
+                  <LogOut :size="14" style="margin-right: 8px" />
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </header>
-      <main class="main-content">
-        <router-view :key="route.path + auth.locationId" />
+
+      <!-- 页面内容 -->
+      <main class="main-content" ref="mainContent">
+        <Breadcrumb v-if="route.path !== '/workbench'" />
+        <router-view v-slot="{ Component }">
+          <transition name="page-slide" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </transition>
+        </router-view>
       </main>
     </div>
+    
+    <!-- 全局撤销提示条 -->
+    <UndoBar />
+    
+    <!-- 快捷键帮助面板 -->
+    <HotkeyHelp />
   </div>
 </template>
+
 <style scoped>
+/* === 整体布局 === */
 .shell {
   display: grid;
-  grid-template-columns: 216px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+.shell.collapsed {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+/* === 侧边栏 === */
 .sidebar {
-  background: #fff;
-  border-right: 1px solid #dde1e6;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  z-index: var(--z-sticky);
 }
+
+/* 品牌区 */
 .brand {
-  height: 76px;
+  height: var(--header-height);
   display: flex;
-  gap: 10px;
   align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #e8ebef;
+  gap: 12px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border-light);
   flex-shrink: 0;
+  transition: padding 0.3s ease;
 }
+
 .brand-mark {
-  background: #15803d;
-  color: white;
   width: 36px;
   height: 36px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
 }
+.brand:hover .brand-mark { transform: scale(1.1) rotate(-5deg); }
+
 .brand-text {
-  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+
+.brand-name {
+  font-size: 14px;
   font-weight: 600;
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
+
 .brand small {
-  display: block;
   font-size: 11px;
-  font-weight: 400;
-  color: #59616d;
-  margin-top: 5px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
 }
-nav {
-  overflow: auto;
-  padding: 8px 12px;
+
+/* 导航区域 */
+.sidebar-nav {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
 }
+
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
 .nav-group {
-  padding: 6px 0;
+  margin-bottom: 4px;
+  animation: navGroupIn 0.4s ease-out both;
 }
+.nav-group:nth-child(1) { animation-delay: 0.05s; }
+.nav-group:nth-child(2) { animation-delay: 0.1s; }
+.nav-group:nth-child(3) { animation-delay: 0.15s; }
+.nav-group:nth-child(4) { animation-delay: 0.2s; }
+.nav-group:nth-child(5) { animation-delay: 0.25s; }
+.nav-group:nth-child(6) { animation-delay: 0.3s; }
+.nav-group:nth-child(7) { animation-delay: 0.35s; }
+.nav-group:nth-child(8) { animation-delay: 0.4s; }
+.nav-group:nth-child(9) { animation-delay: 0.45s; }
+.nav-group:nth-child(10) { animation-delay: 0.5s; }
+
+@keyframes navGroupIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 .nav-heading {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px;
-  color: #69717d;
-  font-size: 12px;
-}
-.nav-group a {
-  display: block;
-  padding: 9px 12px 9px 33px;
-  font-size: 13px;
-  border-radius: 4px;
-  margin: 2px 0;
-}
-.nav-group a:hover {
-  background: #f5f6f8;
-}
-.nav-group a.router-link-active {
-  background: #edf3ff;
-  color: #2563eb;
-  font-weight: 600;
-}
-.sidebar-foot {
-  padding: 12px 20px;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--color-text-secondary);
   font-size: 11px;
-  color: #777;
-  border-top: 1px solid #dde1e6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s ease;
 }
+
+.nav-item {
+  display: block;
+  padding: 10px 12px 10px 34px;
+  font-size: 13px;
+  color: var(--color-text-regular);
+  border-radius: var(--radius-md);
+  margin: 2px 0;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(13, 148, 136, 0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.nav-item:hover::after { opacity: 1; }
+
+.nav-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  transform: translateX(4px);
+}
+
+.nav-item.active {
+  background: var(--color-primary-lighter);
+  color: var(--color-primary-dark);
+  font-weight: 500;
+  transform: translateX(4px);
+}
+
+/* 激活指示器 - 平滑滑动 */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--color-primary);
+  border-radius: 0 3px 3px 0;
+  animation: indicatorIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes indicatorIn {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* 侧边栏底部 */
+.sidebar-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-footer span {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* === 折叠状态 - 弹性过渡 === */
+.collapsed .brand-text,
+.collapsed .nav-heading span,
+.collapsed .nav-item,
+.collapsed .sidebar-footer {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  visibility: hidden;
+}
+
+.collapsed .brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.collapsed .sidebar-nav {
+  padding: 8px;
+}
+
+.collapsed .nav-heading {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.collapsed .brand-mark {
+  transform: scale(1.15);
+}
+
+/* === 主内容区 === */
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 顶栏 */
 .topbar {
-  height: 60px;
-  background: #fff;
-  border-bottom: 1px solid #dde1e6;
+  height: var(--header-height);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.85);
 }
+
+.menu-toggle {
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.menu-toggle:hover {
+  background: var(--color-primary-lighter);
+  color: var(--color-primary);
+  border-color: var(--color-primary-light);
+}
+.menu-toggle:active { transform: scale(0.9); }
+
 .breadcrumb {
-  font-size: 13px;
-  color: #59616d;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  animation: breadcrumbIn 0.3s ease-out;
 }
+@keyframes breadcrumbIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 .topbar-right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
 }
+
+.location-select { width: 180px; }
+:deep(.location-select .el-select__wrapper) { border-radius: var(--radius-sm); }
+
 .user-menu {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
-  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
 }
+.user-menu:hover {
+  background: var(--color-bg-hover);
+  transform: translateY(-1px);
+}
+
 .avatar {
-  width: 28px;
-  height: 28px;
-  background: #e8edf4;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  color: white;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 12px;
-  color: #445062;
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.main {
-  min-width: 0;
+.user-menu:hover .avatar { transform: scale(1.1); }
+
+.user-name {
+  font-size: 14px;
+  color: var(--color-text-regular);
 }
+
+/* 主内容 */
 .main-content {
+  flex: 1;
   padding: 24px;
-  max-width: 1800px;
-  margin: auto;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
-.collapsed {
-  grid-template-columns: 64px minmax(0, 1fr);
-}
-.collapsed .brand-text,
-.collapsed .nav-heading span,
-.collapsed .nav-group a,
-.collapsed .sidebar-foot {
-  display: none;
-}
-.collapsed .brand {
-  padding: 14px;
-}
-.collapsed nav {
-  padding: 8px;
-}
-.collapsed .nav-heading {
-  justify-content: center;
-  padding: 10px 0;
-}
+
+/* === 响应式 === */
 @media (max-width: 768px) {
-  .shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .shell { grid-template-columns: minmax(0, 1fr); }
   .sidebar {
-    position: fixed;
-    z-index: 100;
-    left: 0;
-    width: 216px;
+    position: fixed; left: 0; top: 0;
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: var(--shadow-xl);
   }
-  .collapsed .sidebar {
-    display: none;
-  }
-  .topbar {
-    padding: 0 12px;
-  }
-  .topbar-right {
-    gap: 12px;
-  }
-  .breadcrumb {
-    display: none;
-  }
-  .main-content {
-    padding: 16px;
-  }
-  .user-menu {
-    font-size: 0;
-  }
-}
-</style>
-<style scoped>
-@media (max-width: 768px) {
-  .sidebar {
-    top: 60px;
-    height: calc(100vh - 60px);
-  }
-  .topbar {
-    position: relative;
-    z-index: 101;
-  }
-  .user-menu .avatar {
-    font-size: 12px;
-  }
+  .shell:not(.collapsed) .sidebar { transform: translateX(0); }
+  .collapsed .sidebar { transform: translateX(-100%); }
+  .topbar { padding: 0 16px; }
+  .breadcrumb { display: none; }
+  .location-select { width: 140px; }
+  .user-name { display: none; }
+  .main-content { padding: 16px; }
 }
 </style>
