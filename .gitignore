@@ -10,3 +10,8 @@ back/src/main/resources/application-local.yml
 *.log
 .idea/
 .vscode/
+template.doc
+template.docx
+read_template.py
+generate_design_doc.py
+软件设计说明书.docx

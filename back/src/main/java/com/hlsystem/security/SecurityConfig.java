@@ -26,12 +26,17 @@ public class SecurityConfig {
         a ->
             a.requestMatchers("/api/v1/auth/csrf", "/api/v1/health")
                 .permitAll()
+                .requestMatchers("/assets/**", "/favicon.ico", "/index.html")
+                .permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/")
+                .permitAll()
                 .anyRequest()
                 .authenticated());
     http.csrf(
         c ->
             c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers("/assets/**", "/favicon.ico", "/index.html", "/"));
     http.formLogin(
         f ->
             f.loginProcessingUrl("/api/v1/auth/login")
